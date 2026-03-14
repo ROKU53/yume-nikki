@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>夢日記 — Dream Journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Antique+Soft&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #1a1625; --ink-soft: #3d3550; --ink-faint: #7a6e8e;
+      --paper: #f7f4ef; --paper-aged: #ede8e0; --paper-line: rgba(90,80,120,0.12);
+      --accent: #7c5cbf; --accent-soft: #b89ee0; --accent-pale: #ede8f7;
+      --moon: #e8d5a3;
+    }
+    html, body { height: 100%; background: var(--paper); }
+    body { font-family: 'Noto Sans JP', sans-serif; color: var(--ink); max-width: 480px; margin: 0 auto; position: relative; min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: repeating-linear-gradient(transparent, transparent 27px, var(--paper-line) 28px);
+      background-size: 100% 28px; pointer-events: none; z-index: 0;
+    }
+    #app { position: relative; z-index: 1; }
+
+    /* HEADER */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid var(--paper-line); }
+    .header-title { font-family: 'Zen Antique Soft', serif; font-size: 24px; letter-spacing: .12em; }
+    .header-sub { font-size: 11px; color: var(--ink-faint); letter-spacing: .06em; margin-top: 2px; }
+    .moon-ic { width: 36px; height: 36px; border-radius: 50%; background: var(--moon); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+    /* NAV */
+    .nav { display: flex; border-bottom: 1px solid var(--paper-line); }
+    .nav-tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 11px; letter-spacing: .06em; color: var(--ink-faint); cursor: pointer; border-bottom: 2px solid transparent; transition: color .2s, border-color .2s; }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+    /* VIEWS */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* RECORD */
+    .rec-area { padding: 20px 24px; }
+    .fl { font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 7px; }
+    .type-grid { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 20px; }
+    .tc { font-size: 12px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--paper-line); background: var(--paper-aged); color: var(--ink-faint); cursor: pointer; transition: all .15s; }
+    .tc.active { background: var(--accent-pale); border-color: var(--accent-soft); color: var(--accent); }
+    textarea.dta { width: 100%; min-height: 100px; resize: none; background: transparent; border: none; outline: none; font-family: 'Noto Sans JP', sans-serif; font-size: 15px; line-height: 2; color: var(--ink); padding: 0; border-bottom: 1px solid var(--paper-line); margin-bottom: 18px; }
+    textarea.dta::placeholder { color: var(--ink-faint); }
+    .sub-btn { font-family: 'Zen Antique Soft', serif; font-size: 15px; letter-spacing: .12em; padding: 10px 28px; border-radius: 99px; background: var(--accent); color: #fff; border: none; cursor: pointer; float: right; transition: opacity .15s; }
+    .sub-btn:hover { opacity: .85; } .sub-btn:disabled { opacity: .35; cursor: default; }
+    .loading-w { text-align: center; padding: 24px; color: var(--ink-faint); font-size: 13px; display: none; }
+    .ld { animation: lb 1.4s infinite; display: inline-block; }
+    .ld:nth-child(2){animation-delay:.2s} .ld:nth-child(3){animation-delay:.4s}
+    @keyframes lb { 0%,80%,100%{opacity:.15} 40%{opacity:1} }
+
+    /* RESULT CARD */
+    .rcl { margin-top: 24px; }
+    .rc { background: var(--paper-aged); border-radius: 14px; border: 1px solid rgba(124,92,191,.15); overflow: hidden; }
+    .rc-top { padding: 12px 18px; background: var(--accent-pale); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .rc-badge { font-family: 'Zen Antique Soft', serif; font-size: 14px; color: var(--accent); }
+    .kw-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .kw { font-size: 11px; padding: 3px 10px; border-radius: 99px; background: rgba(124,92,191,.1); color: var(--accent); }
+    .rs { padding: 14px 18px; border-top: 1px solid var(--paper-line); }
+    .rsl { font-size: 10px; letter-spacing: .1em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 6px; }
+    .rsb { font-size: 14px; line-height: 1.85; color: var(--ink-soft); }
+    .radv { padding: 14px 18px; border-top: 1px solid var(--paper-line); background: rgba(124,92,191,.04); }
+    .radv-t { font-family: 'Zen Antique Soft', serif; font-size: 16px; color: var(--accent); letter-spacing: .06em; line-height: 1.7; }
+    .rcon { padding: 14px 18px; border-top: 1px solid var(--paper-line); background: rgba(232,213,163,.15); }
+
+    /* CALENDAR */
+    .cal-area { padding: 18px 20px; }
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .cal-nav-btn { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 20px; padding: 4px 10px; line-height: 1; }
+    .cal-month-label { font-family: 'Zen Antique Soft', serif; font-size: 18px; letter-spacing: .1em; color: var(--ink); }
+    .cal-dow-row { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-bottom: 4px; }
+    .cal-dow { text-align: center; font-size: 10px; color: var(--ink-faint); padding: 4px 0; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+    .cal-cell { min-height: 46px; border-radius: 8px; padding: 5px; cursor: default; transition: background .15s; }
+    .cal-cell.has-dream { cursor: pointer; background: var(--accent-pale); }
+    .cal-cell.has-dream:hover { background: rgba(124,92,191,.2); }
+    .cal-cell.today .cal-dn { color: var(--accent); font-weight: 500; }
+    .cal-cell.other-month .cal-dn { color: var(--paper-line); }
+    .cal-dn { font-size: 12px; color: var(--ink-soft); line-height: 1; }
+    .cal-dot-row { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
+    .cal-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-soft); }
+    .cal-type-mini { font-size: 9px; color: var(--accent); line-height: 1.3; margin-top: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+    /* TIMELINE */
+    .tl-area { padding: 20px 24px 60px; }
+    .tl-hint { font-size: 12px; color: var(--ink-faint); margin-bottom: 20px; }
+    .tl-scroll { overflow-x: auto; padding-bottom: 8px; }
+    .tl-empty { text-align: center; padding: 48px; color: var(--ink-faint); font-size: 13px; line-height: 2; }
+    .tl-empty span { font-family: 'Zen Antique Soft', serif; font-size: 32px; display: block; margin-bottom: 10px; color: var(--accent-soft); }
+
+    /* DIARY */
+    .diary-area { padding: 0 0 60px; }
+    .diary-month-h { padding: 14px 24px 6px; font-family: 'Zen Antique Soft', serif; font-size: 14px; color: var(--ink-faint); letter-spacing: .1em; border-bottom: 1px solid var(--paper-line); }
+    .de { padding: 16px 24px; border-bottom: 1px solid var(--paper-line); cursor: pointer; transition: background .15s; }
+    .de:hover { background: rgba(124,92,191,.04); }
+    .de-top { display: flex; align-items: flex-start; gap: 14px; }
+    .de-dc { min-width: 32px; text-align: center; }
+    .de-day { font-family: 'Zen Antique Soft', serif; font-size: 24px; color: var(--accent); line-height: 1; }
+    .de-dow { font-size: 10px; color: var(--ink-faint); }
+    .de-body { flex: 1; min-width: 0; }
+    .de-type { font-size: 11px; color: var(--accent-soft); margin-bottom: 3px; }
+    .de-text { font-size: 13px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .de-kws { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .de-kw { font-size: 10px; padding: 2px 8px; border-radius: 99px; background: var(--paper-line); color: var(--ink-faint); }
+    .empty-st { padding: 48px 24px; text-align: center; color: var(--ink-faint); font-size: 13px; line-height: 2; }
+    .empty-st span { font-family: 'Zen Antique Soft', serif; font-size: 32px; display: block; margin-bottom: 10px; color: var(--accent-soft); }
+
+    /* DETAIL */
+    .detail-ov { position: fixed; inset: 0; z-index: 100; background: var(--paper); transform: translateX(100%); transition: transform .3s ease; overflow-y: auto; max-width: 480px; margin: 0 auto; }
+    .detail-ov.open { transform: translateX(0); }
+    .det-back { display: flex; align-items: center; gap: 8px; padding: 16px 24px; cursor: pointer; color: var(--accent); font-size: 14px; border-bottom: 1px solid var(--paper-line); }
+    .det-dh { padding: 16px 24px 12px; font-family: 'Zen Antique Soft', serif; font-size: 20px; color: var(--ink); letter-spacing: .08em; border-bottom: 1px solid var(--paper-line); }
+    .det-dt { padding: 16px 24px; font-size: 14px; line-height: 2; color: var(--ink-soft); border-bottom: 1px solid var(--paper-line); }
+    .det-res { padding: 16px; }
+
+    /* IMAGE GENERATION */
+    .img-btn { font-family: 'Zen Antique Soft', serif; font-size: 13px; letter-spacing: .1em; padding: 8px 20px; border-radius: 99px; background: transparent; color: var(--accent); border: 1px solid var(--accent-soft); cursor: pointer; transition: all .15s; margin-top: 12px; width: 100%; }
+    .img-btn:hover { background: var(--accent-pale); }
+    .img-btn:disabled { opacity: .35; cursor: default; }
+    .img-wrap { margin-top: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--paper-line); }
+    .img-wrap img { width: 100%; display: block; }
+    .img-loading { text-align: center; padding: 20px; color: var(--ink-faint); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div>
+      <div class="header-title">夢日記</div>
+      <div class="header-sub">DREAM JOURNAL</div>
+    </div>
+    <div class="moon-ic">🌙</div>
+  </div>
+  <div class="nav">
+    <div class="nav-tab active" data-view="record" onclick="sv('record')">記録する</div>
+    <div class="nav-tab" data-view="calendar" onclick="sv('calendar')">カレンダー</div>
+    <div class="nav-tab" data-view="timeline" onclick="sv('timeline')">つながり</div>
+    <div class="nav-tab" data-view="diary" onclick="sv('diary')">日記</div>
+  </div>
+
+  <!-- RECORD -->
+  <div class="view active" id="vw-record">
+    <div class="rec-area">
+      <div class="fl">夢のタイプ</div>
+      <div class="type-grid" id="tg">
+        <div class="tc" onclick="toggleChip(this)">空を飛ぶ夢</div>
+        <div class="tc" onclick="toggleChip(this)">冒険する夢</div>
+        <div class="tc" onclick="toggleChip(this)">逃げる夢</div>
+        <div class="tc" onclick="toggleChip(this)">懐かしい場所の夢</div>
+        <div class="tc" onclick="toggleChip(this)">知らない街の夢</div>
+        <div class="tc" onclick="toggleChip(this)">動物が出る夢</div>
+        <div class="tc" onclick="toggleChip(this)">海・水の夢</div>
+        <div class="tc" onclick="toggleChip(this)">誰かと話す夢</div>
+        <div class="tc" onclick="toggleChip(this)">繰り返し見る夢</div>
+        <div class="tc" onclick="toggleChip(this)">不思議な建物の夢</div>
+        <div class="tc" onclick="toggleChip(this)">光に包まれる夢</div>
+        <div class="tc" onclick="toggleChip(this)">追いかける夢</div>
+      </div>
+      <div class="fl">夢の内容</div>
+      <textarea class="dta" id="di" placeholder="覚えている場面、感情、人物、色を自由に…" rows="5"></textarea>
+      <button class="sub-btn" id="sb" onclick="submitDream()">診断して記録する</button>
+      <div style="clear:both;"></div>
+      <div class="loading-w" id="lw">
+        <span class="ld">●</span><span class="ld">●</span><span class="ld">●</span>
+        <p style="margin-top:10px;letter-spacing:.08em;">夢を読み解いています</p>
+      </div>
+      <div class="rcl" id="ra"></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="view" id="vw-calendar">
+    <div class="cal-area">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="cal-month-label" id="cal-label"></div>
+        <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-dow-row">
+        <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div>
+        <div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div>
+        <div class="cal-dow">土</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="view" id="vw-timeline">
+    <div class="tl-area">
+      <div class="tl-hint">夢と夢のつながりを時系列で表示。タップで詳細を見る。</div>
+      <div id="tl-content"></div>
+    </div>
+  </div>
+
+  <!-- DIARY -->
+  <div class="view" id="vw-diary">
+    <div class="diary-area" id="diary-area"></div>
+  </div>
+
+  <!-- DETAIL OVERLAY -->
+  <div class="detail-ov" id="det-ov">
+    <div class="det-back" onclick="closeDet()">← 戻る</div>
+    <div class="det-dh" id="det-dh"></div>
+    <div class="det-dt" id="det-dt"></div>
+    <div class="det-res" id="det-res"></div>
+  </div>
+</div>
+
+<script>
+const SK = 'yume_diary_v5';
+const DAYS = ['日','月','火','水','木','金','土'];
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+
+function load() { try { return JSON.parse(localStorage.getItem(SK) || '[]'); } catch { return []; } }
+function save(d) { try { localStorage.setItem(SK, JSON.stringify(d.slice(0, 40))); } catch {} }
+
+function sv(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('vw-' + v).classList.add('active');
+  document.querySelector(`[data-view="${v}"]`).classList.add('active');
+  if (v === 'calendar') renderCal();
+  if (v === 'diary') renderDiary();
+  if (v === 'timeline') renderTimeline();
+}
+
+function toggleChip(el) { el.classList.toggle('active'); }
+function getChips() { return [...document.querySelectorAll('.tc.active')].map(e => e.textContent); }
+
+async function submitDream() {
+  const input = document.getElementById('di').value.trim();
+  if (!input) return;
+  const btn = document.getElementById('sb'); btn.disabled = true;
+  document.getElementById('lw').style.display = 'block';
+  document.getElementById('ra').innerHTML = '';
+  const history = load(), prev = history[0] || null, types = getChips();
+  const pCtx = prev ? `\n前回の夢（${prev.date}）：${prev.input}\n前回KW：${(prev.result.keywords||[]).join('、')}` : '';
+  const sys = `夢分析の専門家として心理学的・神秘的に分析。JSONのみ（前置き・コードブロック不要）。
+{"dream_type":"一言","keywords":["3〜5個"],"deep_psychology":"深層心理150〜200字","near_future":"近未来150〜200字","connection":${prev ? '"前回との繋がり・次の夢の示唆120〜160字"' : 'null'},"connection_label":${prev ? '"繋がりを一言で（例：解放への旅路、光を求めて）"' : 'null'},"advice":"ひとことアドバイス40〜60字"}`;
+  const um = `${types.length ? 'タイプ：' + types.join('、') + '\n' : ''}内容：${input}${pCtx}`;
+  try {
+    // バックエンド経由でAPIを呼び出す（APIキーはサーバー側で管理）
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: sys, messages: [{ role: 'user', content: um }] })
+    });
+    const data = await res.json();
+    const text = data.content?.map(b => b.text || '').join('') || '';
+    let parsed; try { parsed = JSON.parse(text.replace(/```json|```/g, '').trim()); } catch { throw 0; }
+    const now = new Date();
+    const entry = {
+      id: Date.now(),
+      date: now.toLocaleDateString('ja-JP', {year:'numeric',month:'long',day:'numeric'}),
+      isoDate: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,
+      day: now.getDate(), dow: DAYS[now.getDay()],
+      month: now.toLocaleDateString('ja-JP', {year:'numeric',month:'long'}),
+      input, types, result: parsed
+    };
+    save([entry, ...history]);
+    renderResult(parsed, !!prev, 'ra', input);
+    document.querySelectorAll('.tc.active').forEach(e => e.classList.remove('active'));
+    document.getElementById('di').value = '';
+  } catch {
+    document.getElementById('ra').innerHTML = '<p style="color:var(--ink-faint);font-size:13px;margin-top:16px;">分析に失敗しました。もう一度お試しください。</p>';
+  } finally {
+    btn.disabled = false;
+    document.getElementById('lw').style.display = 'none';
+  }
+}
+
+function renderResult(d, hasPrev, targetId, dreamText) {
+  const kws = (d.keywords||[]).map(k => `<span class="kw">${k}</span>`).join('');
+  let conn = '';
+  if (hasPrev && d.connection) conn = `<div class="rcon"><div class="rsl">前回との繋がり・次の夢の示唆</div><div class="rsb">${d.connection}</div></div>`;
+  const imgSection = dreamText ? `
+    <div class="rs">
+      <div class="rsl">夢のビジュアル</div>
+      <button class="img-btn" onclick="generateImage(this, \`${dreamText.replace(/`/g,"'")}\`)">この夢を画像にする</button>
+      <div class="img-wrap" id="img-result-${targetId}" style="display:none;"></div>
+    </div>` : '';
+  document.getElementById(targetId).innerHTML = `
+    <div class="rc">
+      <div class="rc-top"><span class="rc-badge">${d.dream_type||''}</span><div class="kw-row">${kws}</div></div>
+      <div class="rs"><div class="rsl">深層心理</div><div class="rsb">${d.deep_psychology||''}</div></div>
+      <div class="rs"><div class="rsl">近未来への暗示</div><div class="rsb">${d.near_future||''}</div></div>
+      ${conn}
+      <div class="radv"><div class="rsl">今日のひとこと</div><div class="radv-t">${d.advice||''}</div></div>
+      ${imgSection}
+    </div>`;
+}
+
+async function generateImage(btn, dreamText) {
+  btn.disabled = true;
+  btn.textContent = '生成中…';
+  const wrap = btn.nextElementSibling;
+  wrap.style.display = 'block';
+  wrap.innerHTML = '<div class="img-loading">夢の風景を描いています<br><span class="ld">●</span><span class="ld">●</span><span class="ld">●</span></div>';
+  try {
+    const res = await fetch('/api/image', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: dreamText })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    wrap.innerHTML = `<img src="${data.imageUrl}" alt="夢のビジュアル" />`;
+    btn.style.display = 'none';
+  } catch(e) {
+    wrap.innerHTML = '<div class="img-loading">生成に失敗しました。もう一度お試しください。</div>';
+    btn.disabled = false;
+    btn.textContent = 'この夢を画像にする';
+  }
+}
+
+
+  const history = load(), el = document.getElementById('tl-content');
+  if (history.length < 2) {
+    el.innerHTML = `<div class="tl-empty"><span>☽</span>${history.length === 0 ? '夢を2つ以上記録すると' : 'もう一つ夢を記録すると'}<br>つながりが表示されます</div>`; return;
+  }
+  const items = [...history].reverse();
+  const COL_W = 120, H_PAD = 60, NODE_R = 28;
+  const svgW = Math.max(400, items.length * COL_W + H_PAD * 2);
+  const svgH = 260, cy = svgH / 2;
+  let paths = '', nodes = '', labels = '';
+  items.forEach((e, i) => {
+    const x = H_PAD + i * COL_W;
+    const kw1 = (e.result?.keywords || [''])[0] || '';
+    const dtype = e.result?.dream_type || '';
+    if (i < items.length - 1) {
+      const nx = H_PAD + (i+1) * COL_W, mx = (x + nx) / 2;
+      const lbl = items[i+1].result?.connection_label || '';
+      paths += `<path d="M${x+NODE_R},${cy} C${mx},${cy-40} ${mx},${cy-40} ${nx-NODE_R},${cy}" fill="none" stroke="#b89ee0" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>`;
+      if (lbl) labels += `<text x="${mx}" y="${cy-52}" text-anchor="middle" font-family="'Zen Antique Soft',serif" font-size="9" fill="#7a6e8e" opacity="0.9">${lbl}</text>`;
+    }
+    nodes += `<g onclick="openDetByIso('${e.isoDate}')" style="cursor:pointer;"><circle cx="${x}" cy="${cy}" r="${NODE_R}" fill="#ede8f7" stroke="#b89ee0" stroke-width="1.5"/><text x="${x}" y="${cy+4}" text-anchor="middle" font-family="'Noto Sans JP',sans-serif" font-size="10" fill="#7c5cbf">${dtype.slice(0,4)}</text><text x="${x}" y="${cy+38}" text-anchor="middle" font-family="'Noto Sans JP',sans-serif" font-size="9" fill="#7a6e8e">${e.day}日</text><text x="${x}" y="${cy-40}" text-anchor="middle" font-family="'Noto Sans JP',sans-serif" font-size="9" fill="#3d3550" opacity="0.8">${kw1}</text></g>`;
+  });
+  el.innerHTML = `<div class="tl-scroll"><svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg" style="display:block;">${paths}${labels}${nodes}</svg></div>`;
+}
+
+function openDetByIso(iso) { const e = load().find(x => x.isoDate === iso); if (e) showDetail(e); }
+
+function changeMonth(d) {
+  calMonth += d;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCal();
+}
+
+function renderCal() {
+  const history = load(), dreamMap = {};
+  history.forEach(e => { if (e.isoDate) dreamMap[e.isoDate] = e; });
+  document.getElementById('cal-label').textContent = `${calYear}年${calMonth+1}月`;
+  const first = new Date(calYear, calMonth, 1), lastDay = new Date(calYear, calMonth+1, 0).getDate(), startDow = first.getDay();
+  const today = new Date(), todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  let html = '';
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  for (let i = startDow-1; i >= 0; i--) html += `<div class="cal-cell other-month"><div class="cal-dn">${prevLast-i}</div></div>`;
+  for (let d = 1; d <= lastDay; d++) {
+    const iso = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = dreamMap[iso], isToday = iso === todayStr, hasDream = !!entry;
+    let inner = `<div class="cal-dn">${d}</div>`;
+    if (hasDream) { inner += `<div class="cal-type-mini">${entry.result?.dream_type||''}</div><div class="cal-dot-row">${(entry.result?.keywords||[]).slice(0,2).map(() => '<div class="cal-dot"></div>').join('')}</div>`; }
+    html += `<div class="${['cal-cell', isToday?'today':'', hasDream?'has-dream':''].filter(Boolean).join(' ')}" ${hasDream ? `onclick="openDetByIso('${iso}')"` : ''}>${inner}</div>`;
+  }
+  const rem = (startDow + lastDay) % 7 === 0 ? 0 : 7 - (startDow + lastDay) % 7;
+  for (let d = 1; d <= rem; d++) html += `<div class="cal-cell other-month"><div class="cal-dn">${d}</div></div>`;
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function renderDiary() {
+  const history = load(), area = document.getElementById('diary-area');
+  if (!history.length) { area.innerHTML = `<div class="empty-st"><span>☽</span>まだ夢の記録がありません</div>`; return; }
+  let html = '', lastM = '';
+  history.forEach((e, i) => {
+    if (e.month !== lastM) { html += `<div class="diary-month-h">${e.month}</div>`; lastM = e.month; }
+    const kws = (e.result?.keywords||[]).slice(0,3).map(k => `<span class="de-kw">${k}</span>`).join('');
+    html += `<div class="de" onclick="openDetIdx(${i})"><div class="de-top"><div class="de-dc"><div class="de-day">${e.day}</div><div class="de-dow">${e.dow}</div></div><div class="de-body"><div class="de-type">${e.result?.dream_type||''}${e.types?.length?' · '+e.types.join(' · '):''}</div><div class="de-text">${e.input}</div><div class="de-kws">${kws}</div></div></div></div>`;
+  });
+  area.innerHTML = html;
+}
+
+function openDetIdx(i) { showDetail(load()[i]); }
+function showDetail(e) {
+  document.getElementById('det-dh').textContent = e.date + (e.types?.length ? '　' + e.types.join(' · ') : '');
+  document.getElementById('det-dt').textContent = e.input;
+  renderResult(e.result, false, 'det-res');
+  document.getElementById('det-ov').classList.add('open');
+}
+function closeDet() { document.getElementById('det-ov').classList.remove('open'); }
+
+renderCal();
+</script>
+</body>
+</html>
